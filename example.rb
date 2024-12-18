@@ -1,17 +1,20 @@
 require_relative 'recurring_use'
 
 inventory_item = InventoryItem.new(amount: 70)
+# -7 from Jan 1, 2, 3
 inventory_item.recurring_uses << RecurringUse.new(
   amount: 7,
   start_date: Date.new(2025, 1, 1),
   end_date: Date.new(2025, 1, 3),
   period: :daily
 )
+# -2 from Jan 3, 4, 5, ...
 inventory_item.recurring_uses << RecurringUse.new(
   amount: 2,
   start_date: Date.new(2025, 1, 3),
   period: :daily
 )
+# -3 on Jan 8 & 15
 inventory_item.recurring_uses << RecurringUse.new(
   amount: 3,
   start_date: Date.new(2025, 1, 2),
@@ -19,6 +22,7 @@ inventory_item.recurring_uses << RecurringUse.new(
   period: :weekly,
   weekday: :wednesday
 )
+# -1 on Jan 3, 10, 17, 24, 31, ...
 inventory_item.recurring_uses << RecurringUse.new(
   amount: 1,
   start_date: Date.new(2025, 1, 1),
