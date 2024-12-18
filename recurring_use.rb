@@ -70,6 +70,15 @@ class RecurringUse
     period == :weekly
   end
 
+  def uses(from_date = Date.today)
+    Enumerator.new do |yielder|
+      while (next_date = next_date(from_date))
+        yielder.yield(next_date)
+        from_date = next_date + 1
+      end
+    end.lazy
+  end
+
   def next_date(from_date = Date.today)
     validate!
 
