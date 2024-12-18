@@ -70,13 +70,22 @@ class RecurringUse
     period == :weekly
   end
 
-  def uses(from_date = Date.today)
-    Enumerator.new do |yielder|
-      while (next_date = next_date(from_date))
-        yielder.yield(next_date)
-        from_date = next_date + 1
-      end
-    end.lazy
+  def each_use(from_date = Date.today)
+    return to_enum(:each_use, from_date).lazy unless block_given?
+
+    each_date(from_date) do |date|
+      yield date, amount
+    end
+  end
+
+  def each_date(from_date = Date.today)
+    return to_enum(:each_date, from_date).lazy unless block_given?
+
+    current_date = from_date
+    while (next_date = next_date(current_date))
+      yield next_date
+      current_date = next_date + 1
+    end
   end
 
   def next_date(from_date = Date.today)
@@ -152,6 +161,65 @@ class RecurringUse
 
     if weekday && !WEEKDAYS.include?(weekday)
       errors[:weekday] << "must be one of #{WEEKDAYS.map(&:inspect).join(', ')}"
+    end
+  end
+end
+
+class InventoryItem
+  include Model
+
+  attr_accessor :amount, :recurring_uses
+
+  def recurring_uses
+    @recurring_uses ||= []
+  end
+
+  def validate
+    validate_amount
+  end
+
+  def each_use(from_date = Date.today)
+    return to_enum(:each_use, from_date) unless block_given?
+
+    queue = []
+    enqueue = ->(enumerator) {
+      begin
+        queue << [enumerator.next, enumerator]
+        queue.sort_by!(&:first)
+      rescue StopIteration; end
+    }
+
+    recurring_uses.each do |recurring_use|
+      enqueue[recurring_use.each_use(from_date)]
+    end
+
+    while (next_use = queue.shift)
+      data, enumerator = next_use
+      date, amount = data
+      yield date, amount
+      enqueue[enumerator]
+    end
+  end
+
+  def depletes_on(from_date = Date.today)
+    validate!
+
+    unless from_date.is_a?(Date)
+      raise ArgumentError, 'from_date must be a date'
+    end
+
+    remaining_amount = amount
+    each_use(from_date).each do |date, amount|
+      remaining_amount -= amount
+      break date - 1 if remaining_amount.negative?
+    end
+  end
+
+  private
+
+  def validate_amount
+    unless amount.is_a?(Integer)
+      errors[:amount] << 'must be an integer'
     end
   end
 end

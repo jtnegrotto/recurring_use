@@ -181,15 +181,15 @@ describe RecurringUse do
     end
   end
 
-  describe '#uses(from_date)' do
+  describe '#each_date(from_date)' do
     it 'returns a lazy enumerator' do
-      uses = recurring_use.uses
-      expect(uses).to be_a(Enumerator::Lazy)
+      dates = recurring_use.each_date
+      expect(dates).to be_a(Enumerator::Lazy)
     end
 
     it 'yields each use starting from from_date' do
-      uses = recurring_use.uses(Date.new(2025, 1, 1))
-      expect(uses.take(3).to_a).to eq([
+      dates = recurring_use.each_date(Date.new(2025, 1, 1))
+      expect(dates.take(3).to_a).to eq([
         Date.new(2025, 1, 1),
         Date.new(2025, 1, 2),
         Date.new(2025, 1, 3),
@@ -199,11 +199,37 @@ describe RecurringUse do
     it 'handles weekly recurring uses' do
       recurring_use.period = :weekly
       recurring_use.weekday = :sunday
-      uses = recurring_use.uses(Date.new(2025, 1, 1))
-      expect(uses.take(3).to_a).to eq([
+      dates = recurring_use.each_date(Date.new(2025, 1, 1))
+      expect(dates.take(3).to_a).to eq([
         Date.new(2025, 1, 5),
         Date.new(2025, 1, 12),
         Date.new(2025, 1, 19),
+      ])
+    end
+  end
+
+  describe '#each_use(from_date)' do
+    it 'returns a lazy enumerator' do
+      expect(recurring_use.each_use).to be_a(Enumerator::Lazy)
+    end
+
+    it 'yields each date and amount starting from from_date' do
+      uses = recurring_use.each_use(Date.new(2025, 1, 1))
+      expect(uses.take(3).to_a).to eq([
+        [Date.new(2025, 1, 1), 100],
+        [Date.new(2025, 1, 2), 100],
+        [Date.new(2025, 1, 3), 100],
+      ])
+    end
+
+    it 'handles weekly recurring uses' do
+      recurring_use.period = :weekly
+      recurring_use.weekday = :sunday
+      uses = recurring_use.each_use(Date.new(2025, 1, 1))
+      expect(uses.take(3).to_a).to eq([
+        [Date.new(2025, 1, 5), 100],
+        [Date.new(2025, 1, 12), 100],
+        [Date.new(2025, 1, 19), 100],
       ])
     end
   end
