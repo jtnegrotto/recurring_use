@@ -1,6 +1,15 @@
 require 'date'
 
 module Model
+  class ValidationError < StandardError
+    attr_reader :model
+
+    def initialize(model)
+      super("Validation failed for #{model.class}")
+      @model = model
+    end
+  end
+
   def included base
     base.extend ClassMethods
   end
@@ -18,6 +27,10 @@ module Model
     reset_errors
     validate
     errors.empty?
+  end
+
+  def validate!
+    valid? or raise ValidationError.new(self)
   end
 
   def validate
@@ -56,6 +69,35 @@ class RecurringUse
   def weekly?
     period == :weekly
   end
+
+  def next_date(from_date = Date.today)
+    validate!
+
+    unless from_date && from_date.is_a?(Date)
+      raise ArgumentError, 'from_date must be a date'
+    end
+
+    effective_start_date = [start_date, from_date].max
+
+    next_use_date =
+      if daily?
+        effective_start_date
+      elsif weekly?
+        weekday_index = WEEKDAYS.index(weekday)
+        weekday_offset = (weekday_index - effective_start_date.wday) % 7
+        effective_start_date + weekday_offset
+      else
+        raise NotImplementedError, "period #{period} not implemented"
+      end
+
+    if end_date && end_date < next_use_date
+      return nil
+    end
+
+    next_use_date
+  end
+
+  private
 
   private
 

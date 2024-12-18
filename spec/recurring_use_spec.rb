@@ -111,4 +111,73 @@ describe RecurringUse do
       end
     end
   end
+
+  describe '#next_date(from_date)' do
+    # Wednesday, January 1, 2025
+    let(:today) { Date.new(2025, 1, 1) }
+
+    it 'returns the next date starting on from_date' do
+      expect(recurring_use.next_date(today)).to eq(today)
+    end
+
+    it 'handles weekly recurring uses' do
+      recurring_use.period = :weekly
+      recurring_use.weekday = :sunday
+      expect(recurring_use.next_date(today)).to eq(Date.new(2025, 1, 5))
+    end
+
+    context 'start_date is before from_date' do
+      before { recurring_use.start_date = today - 1 }
+
+      it 'starts from from_date' do
+        expect(recurring_use.next_date(today)).to eq(today)
+      end
+    end
+
+    context 'start_date is after from_date' do
+      before { recurring_use.start_date = today + 1 }
+
+      it 'starts from start_date' do
+        expect(recurring_use.next_date(today)).to eq(today + 1)
+      end
+    end
+
+    context 'end_date is before next date' do
+      context 'daily' do
+        before do
+          recurring_use.start_date = today - 1
+          recurring_use.end_date = today - 1
+        end
+
+        it 'returns nil' do
+          expect(recurring_use.next_date(today)).to be_nil
+        end
+      end
+
+      context 'weekly' do
+        before do
+          recurring_use.period = :weekly
+          recurring_use.weekday = :monday
+          recurring_use.end_date = Date.new(2025, 1, 5)
+        end
+
+        it 'returns nil' do
+          expect(recurring_use.next_date(today)).to be_nil
+        end
+      end
+    end
+
+    context 'record is invalid' do
+      it 'raises a validation error' do
+        recurring_use.end_date = 'today'
+        expect { recurring_use.next_date(today) }.to raise_error(Model::ValidationError)
+      end
+    end
+
+    context 'from_date is not a date' do
+      it 'raises an argument error' do
+        expect { recurring_use.next_date('today') }.to raise_error(ArgumentError)
+      end
+    end
+  end
 end
