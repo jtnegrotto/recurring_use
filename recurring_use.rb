@@ -155,7 +155,7 @@ class InventoryItem
   end
 
   def each_use(from_date = Date.today)
-    return to_enum(:each_use, from_date) unless block_given?
+    return to_enum(:each_use, from_date).lazy unless block_given?
 
     queue = []
     enqueue = ->(enumerator) {

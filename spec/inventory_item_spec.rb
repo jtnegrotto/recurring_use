@@ -21,6 +21,84 @@ describe InventoryItem do
     end
   end
 
+  describe '#each_use(from_date)' do
+    let(:today) { Date.new(2025, 1, 1) }
+
+    it 'returns a lazy enumerator' do
+      expect(inventory_item.each_use).to be_a(Enumerator::Lazy)
+    end
+
+    context 'one daily recurring use' do
+      before do
+        inventory_item.recurring_uses = [
+          RecurringUse.new(
+            amount: 10, start_date: Date.new(2025, 1, 1), period: :daily
+          )
+        ]
+      end
+
+      it 'yields the date and amount of each use' do
+        uses = inventory_item.each_use(today)
+        expect(uses.take(3).to_a).to eq([
+          [today, 10],
+          [today + 1, 10],
+          [today + 2, 10]
+        ])
+      end
+    end
+
+    context 'one weekly recurring use' do
+      before do
+        inventory_item.recurring_uses = [
+          RecurringUse.new(
+            amount: 10, start_date: Date.new(2025, 1, 1), period: :weekly,
+            weekday: :monday
+          )
+        ]
+      end
+
+      it 'yields the date and amount of each use' do
+        monday = today + 5 # 2025-01-06 is a Monday
+        uses = inventory_item.each_use(today)
+        expect(uses.take(3).to_a).to eq([
+          [monday, 10],
+          [monday + 7, 10],
+          [monday + 14, 10]
+        ])
+      end
+    end
+
+    context 'multiple recurring uses' do
+      before do
+        inventory_item.recurring_uses = [
+          RecurringUse.new(
+            amount: 10, start_date: Date.new(2025, 1, 1), period: :daily
+          ),
+          RecurringUse.new(
+            amount: 20, start_date: Date.new(2025, 1, 1), period: :weekly,
+            weekday: :monday
+          )
+        ]
+      end
+
+      it 'yields the date and amount of each use' do
+        sunday = today + 4 # 2025-01-06 is a Sunday
+        uses = inventory_item.each_use(sunday)
+        next_uses = uses.take(4).to_a
+
+        # Daily use on Sunday
+        expect(next_uses.first).to eq([sunday, 10])
+        # Daily and weekly uses on Monday (any order)
+        expect(next_uses.slice(1, 2)).to match_array([
+          [sunday + 1, 10],
+          [sunday + 1, 20]
+        ])
+        # Daily use on Tuesday
+        expect(next_uses.last).to eq([sunday + 2, 10])
+      end
+    end
+  end
+
   describe '#depletes_on(from_date)' do
     let(:today) { Date.new(2025, 1, 1) }
 
