@@ -10,13 +10,6 @@ module Model
     end
   end
 
-  def included base
-    base.extend ClassMethods
-  end
-
-  module ClassMethods
-  end
-
   def initialize(attributes = {})
     attributes.each do |key, value|
       public_send("#{key}=", value)
@@ -89,30 +82,22 @@ class RecurringUse
   end
 
   def next_date(from_date = Date.today)
+    raise ArgumentError, 'from_date must be a date' unless from_date.is_a?(Date)
     validate!
 
-    unless from_date && from_date.is_a?(Date)
-      raise ArgumentError, 'from_date must be a date'
-    end
-
     effective_start_date = [start_date, from_date].max
-
     next_use_date =
-      if daily?
+      case period
+      when :daily
         effective_start_date
-      elsif weekly?
+      when :weekly
         weekday_index = WEEKDAYS.index(weekday)
         weekday_offset = (weekday_index - effective_start_date.wday) % 7
         effective_start_date + weekday_offset
       else
         raise NotImplementedError, "period #{period} not implemented"
       end
-
-    if end_date && end_date < next_use_date
-      return nil
-    end
-
-    next_use_date
+    next_use_date if end_date.nil? || end_date >= next_use_date
   end
 
   private
