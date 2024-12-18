@@ -34,6 +34,10 @@ module Model
     @errors || reset_errors
   end
 
+  def add_error(attribute, message)
+    @errors[attribute] << message
+  end
+
   def reset_errors
     @errors = Hash.new { |hash, key| hash[key] = [] }
   end
@@ -103,49 +107,36 @@ class RecurringUse
   private
 
   def validate_amount
-    unless amount.is_a?(Integer)
-      errors[:amount] << 'must be an integer'
-      return
-    end
-
-    if amount.negative?
-      errors[:amount] << 'must not be negative'
+    if !amount.is_a?(Integer)
+      add_error(:amount, 'must be an integer')
+    elsif amount.negative?
+      add_error(:amount, 'must not be negative')
     end
   end
 
   def validate_start_date
-    unless start_date.is_a?(Date)
-      errors[:start_date] << 'must be a date'
-    end
+    add_error(:start_date, 'must be a date') unless start_date.is_a?(Date)
   end
 
   def validate_end_date
     return if end_date.nil?
 
-    unless end_date.is_a?(Date)
-      errors[:end_date] << 'must be a date or nil'
-      return
-    end
-
-    return unless start_date && start_date.is_a?(Date)
-    unless end_date >= start_date
-      errors[:end_date] << 'cannot be before start_date'
+    if !end_date.is_a?(Date)
+      add_error(:end_date, 'must be a date')
+    elsif start_date.is_a?(Date) && end_date < start_date
+      add_error(:end_date, 'cannot be before start_date')
     end
   end
 
   def validate_period
-    unless PERIODS.include?(period)
-      errors[:period] << "must be one of #{PERIODS.map(&:inspect).join(', ')}"
-    end
+    add_error(:period, 'is not a valid period') unless PERIODS.include?(period)
   end
 
   def validate_weekday
     if weekly? && weekday.nil?
-      errors[:weekday] << 'must be present when period is weekly'
-    end
-
-    if weekday && !WEEKDAYS.include?(weekday)
-      errors[:weekday] << "must be one of #{WEEKDAYS.map(&:inspect).join(', ')}"
+      add_error(:weekday, 'must be present when period is weekly')
+    elsif weekday && !WEEKDAYS.include?(weekday)
+      add_error(:weekday, 'is not a valid weekday')
     end
   end
 end
@@ -203,8 +194,6 @@ class InventoryItem
   private
 
   def validate_amount
-    unless amount.is_a?(Integer)
-      errors[:amount] << 'must be an integer'
-    end
+    add_error(:amount, 'must be an integer') unless amount.is_a?(Integer)
   end
 end
