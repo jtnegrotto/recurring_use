@@ -103,18 +103,52 @@ describe InventoryItem do
     let(:today) { Date.new(2025, 1, 1) }
 
     context 'one daily recurring use' do
-      it 'returns the date the item will be depleted' do
+      before do
         inventory_item.recurring_uses = [
           RecurringUse.new(amount: 10, start_date: today, period: :daily)
         ]
+      end
 
+      it 'returns the date the item will be depleted' do
         expect(inventory_item.depletes_on).to eq(today + 9)
       end
     end
 
-    pending 'one weekly recurring use'
+    context 'one weekly recurring use' do
+      before do
+        inventory_item.amount = 25
+        inventory_item.recurring_uses = [
+          RecurringUse.new(
+            amount: 10, start_date: today, period: :weekly,
+            weekday: :monday
+          )
+        ]
+      end
 
-    pending 'multiple recurring uses'
+      it 'returns the date the item will be depleted' do
+        expect(inventory_item.depletes_on).to eq(
+          Date.new(2025, 1, 19) # Next day is the third Monday
+        )
+      end
+    end
+
+    context 'multiple recurring uses' do
+      before do
+        inventory_item.amount = 55
+        inventory_item.recurring_uses = [
+          RecurringUse.new(amount: 10, start_date: today, period: :daily),
+          RecurringUse.new(
+            amount: 20, start_date: today, period: :weekly,
+            weekday: :friday
+          )
+        ]
+      end
+
+      it 'returns the date the item will be depleted' do
+        # w -10, t -10, f -30, s -10 (fail)
+        expect(inventory_item.depletes_on).to eq(Date.new(2025, 1, 3))
+      end
+    end
 
     context 'there are no recurring uses' do
       it 'returns nil' do
