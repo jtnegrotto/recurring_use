@@ -99,8 +99,6 @@ class RecurringUse
 
   private
 
-  private
-
   def validate_amount
     unless amount.is_a?(Integer)
       errors[:amount] << 'must be an integer'
