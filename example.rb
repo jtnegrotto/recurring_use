@@ -1,6 +1,6 @@
 require_relative 'recurring_use'
 
-inventory_item = InventoryItem.new(amount: 70)
+inventory_item = InventoryItem.new(amount: 60)
 # -7 from Jan 1, 2, 3
 inventory_item.recurring_uses << RecurringUse.new(
   amount: 7,
@@ -42,23 +42,59 @@ inventory_item
     else
       usages[date] = { initial: initial, remaining: remaining }
     end
-    break if remaining.negative?
+    break if remaining < -10
   end
 
 # Print the results
+
+def ansi(string, color: nil, bold: false)
+  color_code = case color
+               when :red then 31
+               when :green then 32
+               when :yellow then 33
+               else nil
+               end
+  bold_code = bold ? 1 : nil
+  code_sequence = [color_code, bold_code].compact.join(";")
+  ansi_code = ["\33[", code_sequence, "m"].join
+  reset_code = "\33[0m"
+  "#{ansi_code}#{string}#{reset_code}"
+end
+
 bar = "\u2588"
+max = usages.first.last[:initial]
 usages.each do |date, data|
   initial, remaining = data.values_at(:initial, :remaining)
   usage = initial - remaining
   available = [remaining, 0].max
   deficit = [-remaining, 0].max
   acceptable_usage = [initial, 0].max - available
+  space = max - available - acceptable_usage - deficit
 
-  print "#{date}: "
-  print "\33[32m#{bar * (available)}\33[0m"
-  print "\33[33m#{bar * (acceptable_usage)}\33[0m"
-  print "\33[31m#{bar * (deficit)}\33[0m"
-  print " #{initial} -> #{remaining}"
-  puts
+  status_color =
+    if remaining > max / 3
+      :green
+    elsif remaining > 0
+      :yellow
+    else
+      :red
+    end
+
+  line = []
+  line << ansi("#{date}", bold: true)
+  line << ": "
+  line << ansi(bar * available, color: :green)
+  line << ansi(bar * acceptable_usage, color: :yellow)
+  line << ansi(bar * deficit, color: :red)
+  line << " " * space
+  line << ansi(sprintf("%3d", initial), bold: true)
+  line << " -> "
+  line << ansi(sprintf("%3d", remaining), color: status_color, bold: true)
+  line << " ("
+  line << ansi(sprintf("%3d", -usage), color: :red, bold: true)
+  line << ")\n"
+  puts line.join
 end
-puts "Depletes on #{inventory_item.depletes_on}"
+
+puts ansi("Depletes on #{inventory_item.depletes_on}", bold: true, color: :red)
+
