@@ -51,7 +51,7 @@ usage_dates.each do |date, usage_data|
   print "#{date}: "
   print "\033[#{32}m#{'*' * [left, 0].max}\033[0m"
   print "\033[#{31}m#{'*' * used}\033[0m"
-  print " (#{left} - #{used})"
+  print " (#{left + used} - #{used})"
   puts
 end
 
