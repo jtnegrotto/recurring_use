@@ -30,28 +30,35 @@ inventory_item.recurring_uses << RecurringUse.new(
   weekday: :friday,
 )
 
-usage_dates = {}
-left = inventory_item.amount
-inventory_item.each_use(Date.new(2025, 1, 1)) do |date, used|
-  left -= used
-
-  if usage_dates[date]
-    prev_left, prev_used = usage_dates[date]
-    usage_dates[date] = [left, prev_used + used]
-  else
-    usage_dates[date] = [left, used]
+# Get the change in inventory until depletion
+usages = {}
+remaining = inventory_item.amount
+inventory_item
+  .each_use(Date.new(2025, 1, 1)) do |date, usage|
+    initial = remaining
+    remaining -= usage
+    if usages[date]
+      usages[date][:remaining] = remaining
+    else
+      usages[date] = { initial: initial, remaining: remaining }
+    end
+    break if remaining.negative?
   end
 
-  break if left.negative?
-end
+# Print the results
+bar = "\u2588"
+usages.each do |date, data|
+  initial, remaining = data.values_at(:initial, :remaining)
+  usage = initial - remaining
+  available = [remaining, 0].max
+  deficit = [-remaining, 0].max
+  acceptable_usage = [initial, 0].max - available
 
-puts "Depletes on #{inventory_item.depletes_on}"
-usage_dates.each do |date, usage_data|
-  left, used = usage_data
   print "#{date}: "
-  print "\033[#{32}m#{'*' * [left, 0].max}\033[0m"
-  print "\033[#{31}m#{'*' * used}\033[0m"
-  print " (#{left + used} - #{used})"
+  print "\33[32m#{bar * (available)}\33[0m"
+  print "\33[33m#{bar * (acceptable_usage)}\33[0m"
+  print "\33[31m#{bar * (deficit)}\33[0m"
+  print " #{initial} -> #{remaining}"
   puts
 end
-
+puts "Depletes on #{inventory_item.depletes_on}"
